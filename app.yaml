@@ -6,3 +6,5 @@ api_version: 1
 handlers:
 - url: /.*
   script: kup.py
+- url: /_i
+  static_dir: images

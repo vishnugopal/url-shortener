@@ -1,4 +1,5 @@
 import cgi
+import os
 import wsgiref.handlers
 from urlparse import urlparse
 
@@ -8,10 +9,10 @@ from google.appengine.ext import db
 
 class Kupify:
 	def next(self, previous_pattern):
-		if(previous_pattern == 'z'):
-			return 'aa'
 		if(previous_pattern == ''):
-			return 'a'			
+			return 'a'
+		if(previous_pattern == 'z'):
+			return 'aa'			
 		if(previous_pattern.endswith("z")):
 			return self.next(previous_pattern[0:-1]) + 'a'
 		else:
@@ -25,35 +26,43 @@ class URL(db.Model):
 	def check_already_existing(self, url):
 		u = False
 		try:
-			u = db.GqlQuery("SELECT * from URL WHERE url = :1", url)
-			u = u[0]
-			uid = u.url_id
+			u = db.GqlQuery("SELECT * from URL WHERE url = :1", url)[0]
 			return u
-		except IndexError:
-			return False
-		except AttributeError:
+		except (IndexError, AttributeError):
 			return False
 		
 	def find_last_url(self):
 		u = False
 		try:
 			u = db.GqlQuery("SELECT * from URL ORDER BY url_id DESC LIMIT 1")
-			u = u[0]
+			return u[0]
 		except IndexError:
-			pass
-		return u
+			return False
+	
+	def url_for_pattern(self, pattern):
+		u = False
+		try:
+			u = db.GqlQuery("SELECT * from URL WHERE pattern = :1 LIMIT 1", pattern)[0]
+			return u
+		except IndexError:
+			return False
 
 class Index(webapp.RequestHandler):
 	def get(self):
-		self.response.out.write("""
-		<html>
-		<body>
-		<form action="/_" method="post">
-		<div><input name="url" id="url" rows="3" cols="60"></div>
-		<div><input type="submit" value="Kup URL!"></div>
-		</form>
-		</body>
-		</html>""")
+		template = file(os.path.join(os.path.dirname(__file__), 'index.html'))
+		template = template.read()
+		self.response.out.write(template)
+
+class Redirect(webapp.RequestHandler):
+	def get(self):
+		pattern = self.request.environ['PATH_INFO'][1:].strip()
+		
+		u = URL()
+		url = u.url_for_pattern(pattern)
+		if(url):
+			self.redirect(url.url)
+		else:
+			self.response.out.write("Can't find a URL to redirect!")
 
 class Kup(webapp.RequestHandler):
 	def post(self):
@@ -71,16 +80,7 @@ class Kup(webapp.RequestHandler):
 		#if already existing, return that record.
 		b = u.check_already_existing(next_url)
 		if(b):
-			u = b
-			out = ''
-			out += '<html><body>URL:<pre>'
-			out += cgi.escape(u.url)
-			out += '</pre><br>Already existing ID:<pre>'
-			out += str(u.url_id)
-			out += '</pre><br>Already existing Pattern:<pre>'
-			out += 'http://kup.in/' + u.pattern
-			out += '</pre></body></html>'
-			self.response.out.write(out)
+			self.response.out.write(u.pattern)
 			return
 			
 		last_url = u.find_last_url()
@@ -92,30 +92,20 @@ class Kup(webapp.RequestHandler):
 		except AttributeError:
 			pass
 			
-		next_pattern = k.next(last_url_pattern)
+		next_url_pattern = k.next(last_url_pattern)
 		
 		u.url = self.request.get('url')
 		u.url_id = last_url_id + 1
-		u.pattern = next_pattern
+		u.pattern = next_url_pattern
 		u.put()
-		
-		out = ''
-		out += '<html><body>URL:<pre>'
-		out += cgi.escape(self.request.get('url'))
-		out += '</pre><br>Last Pattern ID:<pre>'
-		out += str(last_url_id)
-		out += '</pre><br>Last Pattern:<pre>'
-		out += 'http://kup.in/' + last_url_pattern
-		out += '</pre><br>Pattern:<pre>'
-		out += 'http://kup.in/' + next_pattern
-		out += '</pre></body></html>'
-		
-		self.response.out.write(out)
+				
+		self.response.out.write(next_url_pattern)
 
 def main():
 	application = webapp.WSGIApplication(
 		[('/', Index),
-		('/_', Kup)],
+		('/_', Kup),
+		('/.*', Redirect)],
 		debug=True)
 	wsgiref.handlers.CGIHandler().run(application)
 
