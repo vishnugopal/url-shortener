@@ -82,7 +82,7 @@ class Kup(webapp.RequestHandler):
 		#if already existing, return that record.
 		b = u.check_already_existing(next_url)
 		if(b):
-			self.response.out.write('http://kup.in/' + b.pattern)
+			self.response.out.write('http://r.kup.in/' + b.pattern)
 			return
 			
 		last_url = u.find_last_url()
@@ -101,7 +101,7 @@ class Kup(webapp.RequestHandler):
 		u.pattern = next_url_pattern
 		u.put()
 				
-		self.response.out.write('http://kup.in/' + next_url_pattern)
+		self.response.out.write('http://r.kup.in/' + next_url_pattern)
 
 def main():
 	application = webapp.WSGIApplication(
