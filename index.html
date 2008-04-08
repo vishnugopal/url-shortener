@@ -1,16 +1,90 @@
 <!DOCTYPE html>
 <html>
-<head><title>Kup: Short, fast URL redirection service.</title>
+<head><title>Kup: Short &amp; fast URL redirection service.</title>
 <style type="text/css">
-
+#wrapper { position: absolute; width: 300px; height: 200px; margin-left: -150px; margin-top: -100px; left: 50%; top: 50%; }
+h1 { font-family: "Trebuchet MS", "Lucida Grande", "Bitstream Vera Sans", "Arial", "serif"; padding: 0; margin: 0; margin-bottom: 10px; }
+h1 em { font-size: 12px; }
+a { color: #222; text-decoration: none; }
+#url { width: 300px; margin-bottom: 10px; }
+#kupped { font-size: 13px; font-family: 'Georgia', 'Verdana', 'sans-serif'; line-height: 1.5em; margin-bottom: 12px; }
+.green { border: 2px solid #00AA00; }
 </style>	
 </head>
 <body>
-<form action="/_" method="post">
-<div><input name="url" id="url" rows="3" cols="60"></div>
-<div><input type="submit" value="Kup URL!"></div>
+<div id="wrapper">
+<h1><a href="/">Kup: <em>Short &amp; fast URL redirection service.</em></a></h1>
+<form method="post" id="form" name="form" onsubmit="return false;">
+<div><input id="url" name="url" rows="3" cols="60"></div>
+<div id="kupped"></div>
+<div id="div_submit"><input type="submit" id="submit" name="submit" value="Kup URL!"/></div>
 </form>
-</body>
+</div>
 <script type="text/javascript">
+
+function $(el) { return document.getElementById(el); }
+
+/* Simple cross-browser AJAX function */
+function ajax(url, vars, callbackFunction) {
+  var request = window.XMLHttpRequest ?
+      new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+  request.open("POST", url, true);
+  request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
+  request.onreadystatechange = function() {
+    if (request.readyState == 4 && request.status == 200) {
+      if (request.responseText) {
+          callbackFunction(request.responseText);
+      }
+    }
+  };
+  request.send(vars);
+}
+
+function is_mac() {
+	if (navigator.appVersion.indexOf("Mac")!=-1) 
+		return true;
+	else 
+		return false;
+}
+
+function reload() {
+	$('url').value = '';
+	$('div_submit').innerHTML = '<input type="submit" id="submit" name="submit" value="Kup URL!"/>';
+	$('kupped').innerHTML = '';
+	$('url').className = '';
+}
+
+function kupback(response) {
+	$('submit').value = "Kup URL!";
+	$('submit').disabled = false;
+	$('url').disabled = false;
+	if(response == "ERROR") {
+		$('kupped').innerHTML = "<em>'" + $('url').value  + "'</em> isn't a valid URL!";
+	} else {
+		$('url').value = response;
+		$('url').className = 'green';
+		copy_char = (is_mac() == true ? '&#8984;' : 'Ctrl');
+		$('kupped').innerHTML = 'Click the above field and press ' + copy_char + '+C to copy to clipboard.';
+		$('div_submit').innerHTML = '<button onclick="javascript: reload()">Another?</button>'
+	}
+}
+
+$('form').onsubmit = function() {
+	$('submit').value = "Kupifying...";
+	$('submit').disabled = true;
+	$('url').disabled = true;
+	ajax('/_', 'url=' + $('url').value, kupback);
+	return false;
+};
+
+$('url').onfocus = function() {
+	$('url').select();
+}
+
+window.onload = function() {
+	$('url').value = '';
+}
+
 </script>
+</body>
 </html>

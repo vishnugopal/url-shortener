@@ -26,7 +26,8 @@ class URL(db.Model):
 	def check_already_existing(self, url):
 		u = False
 		try:
-			u = db.GqlQuery("SELECT * from URL WHERE url = :1", url)[0]
+			u = db.GqlQuery("SELECT * from URL WHERE url = :1", url)
+			u = u[0]
 			return u
 		except (IndexError, AttributeError):
 			return False
@@ -34,8 +35,8 @@ class URL(db.Model):
 	def find_last_url(self):
 		u = False
 		try:
-			u = db.GqlQuery("SELECT * from URL ORDER BY url_id DESC LIMIT 1")
-			return u[0]
+			u = db.GqlQuery("SELECT * from URL ORDER BY url_id DESC LIMIT 1")[0]
+			return u
 		except IndexError:
 			return False
 	
@@ -51,6 +52,7 @@ class Index(webapp.RequestHandler):
 	def get(self):
 		template = file(os.path.join(os.path.dirname(__file__), 'index.html'))
 		template = template.read()
+		self.response.content_type = "text/html; charset=utf8"
 		self.response.out.write(template)
 
 class Redirect(webapp.RequestHandler):
@@ -80,7 +82,7 @@ class Kup(webapp.RequestHandler):
 		#if already existing, return that record.
 		b = u.check_already_existing(next_url)
 		if(b):
-			self.response.out.write(u.pattern)
+			self.response.out.write('http://kup.in/' + b.pattern)
 			return
 			
 		last_url = u.find_last_url()
@@ -99,7 +101,7 @@ class Kup(webapp.RequestHandler):
 		u.pattern = next_url_pattern
 		u.put()
 				
-		self.response.out.write(next_url_pattern)
+		self.response.out.write('http://kup.in/' + next_url_pattern)
 
 def main():
 	application = webapp.WSGIApplication(
